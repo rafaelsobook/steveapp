@@ -3,7 +3,6 @@ import { initializeSocket } from './socket/socketLogic.js';
 import createScene from "./scenes/createScene.js";
 const log = console.log;
 
-
 let state = 'LOBBY' // LOADING, LOBBY, GAME
 
 initializeSocket()
