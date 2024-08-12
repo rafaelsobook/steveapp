@@ -1,10 +1,7 @@
 import { Vector3 } from "@babylonjs/core";
 const log = console.log
 export async function loadAvatarContainer(scene, glbName, SceneLoader){
-    return await SceneLoader.LoadAssetContainerAsync("./models/", `${glbName}`, scene, ({total, loaded}) => {
-        const completionPercent = Math.floor(loaded/total*100)
-        console.log(completionPercent)
-    });
+    return await SceneLoader.LoadAssetContainerAsync("./models/", `${glbName}`, scene);
 }
 export function createPlayer(detail, RootAvatar, animationsGLB){
     const {loc, _id, name } = detail
