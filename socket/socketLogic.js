@@ -74,6 +74,7 @@ export function initializeSocket(){
           const normX = loc.x/magnitude
           const normZ = loc.z/magnitude
           log("dirX:", normX, "dirZ:", normZ);
+
           playerThatMoved.mainBody.lookAt(new Vector3(loc.x,0,loc.z),0,0,0);
           
           // if(data._movingForward && !playerThatMoved._movingForward){

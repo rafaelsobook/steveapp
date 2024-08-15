@@ -23,11 +23,11 @@ export function createPlayer(detail, RootAvatar, animationsGLB, scene){
     root.parent = mainBody
     root.position = new Vector3(0,-1,0)
 
-    if(getMyDetail()._id === _id){
-        scene.activeCamera.setTarget(mainBody)
-        scene.activeCamera.alpha = -Math.PI/2
-        scene.activeCamera.beta = 1
-    }
+    // if(getMyDetail()._id === _id){
+    //     scene.activeCamera.setTarget(mainBody)
+    //     scene.activeCamera.alpha = -Math.PI/2
+    //     scene.activeCamera.beta = 1
+    // }
 
     const rotationAnimation = new Animation("rotationAnimation", "rotation.y", 60,Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
     mainBody.animations[0] =rotationAnimation 

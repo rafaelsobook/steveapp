@@ -189,7 +189,7 @@ export function blendAnimv2(pl,toAnim, _anims, isLooping){
         }
     })
     if(desiredAnimIsPlaying) return log("desired anim is still running")
-    let currentPlayingAnim = pl.anims.find(anim => anim.isPlaying)
+    let currentPlayingAnim = pl.anims.find(anim => anim.isPlaying)// idle anim
     if(!currentPlayingAnim) {
         currentPlayingAnim = pl.anims[0]
     }
