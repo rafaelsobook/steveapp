@@ -1,15 +1,36 @@
-import { Vector3 } from "@babylonjs/core";
+import { Vector3, Animation, MeshBuilder } from "@babylonjs/core";
+import { getMyDetail } from "./socket/socketLogic.js";
 const log = console.log
 export async function loadAvatarContainer(scene, glbName, SceneLoader){
     return await SceneLoader.LoadAssetContainerAsync("./models/", `${glbName}`, scene);
 }
-export function createPlayer(detail, RootAvatar, animationsGLB){
-    const {loc, _id, name } = detail
+export function createPlayer(detail, RootAvatar, animationsGLB, scene){
+    const {loc, dir, _id, name, _movingForward, _movingBackward, _movingLeft, _movingRight } = detail
     const instance = RootAvatar.instantiateModelsToScene()
-    const mainBody = instance.rootNodes[0]
-    const modelTransformNodes = mainBody.getChildTransformNodes()
+    const root = instance.rootNodes[0]
+    const modelTransformNodes = root.getChildTransformNodes()
+   
+    const box = scene.getMeshByName('toInstanceBox')
 
-    mainBody.position = new Vector3(loc.x,loc.y,loc.z)
+    if(!box) return log("main box for body not found")
+    
+    const mainBody = box.clone(`player.${_id}`)
+    
+    mainBody.position = new Vector3(loc.x,0,loc.z)
+    mainBody.lookAt(new Vector3(dir.x,mainBody.position.y,dir.z),0,0,0)
+    mainBody.isVisible = false
+    
+    root.parent = mainBody
+    root.position = new Vector3(0,-1,0)
+
+    if(getMyDetail()._id === _id){
+        scene.activeCamera.setTarget(mainBody)
+        scene.activeCamera.alpha = -Math.PI/2
+        scene.activeCamera.beta = 1
+    }
+
+    const rotationAnimation = new Animation("rotationAnimation", "rotation.y", 60,Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
+    mainBody.animations[0] =rotationAnimation 
 
     animationsGLB.forEach(anim => {
         const clonedAnim = anim.clone(`walk_anim_${anim.name}`, (oldTarget) => {
@@ -27,12 +48,21 @@ export function createPlayer(detail, RootAvatar, animationsGLB){
         // anim.dispose()
     })
     instance.animationGroups[0].play(true)
-
     return {
         _id,
+        dir,
         mainBody,
         anims: instance.animationGroups,
-        instance
+        instance,
+        rotationAnimation,
+        isRotating: false,
+        _movingForward,
+        _movingBackward,
+        _movingLeft,
+        _movingRight,
+        _movementName: undefined,
+        canRotate: true,
+        weightInterval: undefined
     }
 }
 export async function createAvatar_Old(glbName, pos, direction, animationsGLB){

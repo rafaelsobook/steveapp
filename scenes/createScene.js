@@ -1,8 +1,9 @@
-import {  MeshBuilder,Animation, SceneLoader, Scene, Vector3, ArcRotateCamera} from '@babylonjs/core'
+import {  MeshBuilder, Matrix, PointerEventTypes,  Mesh,Animation, SceneLoader, Scene, Vector3, ArcRotateCamera, HemisphericLight} from '@babylonjs/core'
+import {SkyMaterial} from "@babylonjs/materials/sky";
 import "@babylonjs/loaders"
 import { createPlayer, loadAvatarContainer } from '../creations.js'
 import { getState, setState } from '../main.js'
-import { getAllPlayersInSocket } from '../socket/socketLogic.js'
+import { emitMove, getAllPlayersInSocket, getMyDetail } from '../socket/socketLogic.js'
 
 const log = console.log
 
@@ -15,15 +16,42 @@ let interval
 let players = []
 
 // necessities to create player
+let scene
 let AvatarRoot
 let animationsGLB = []
 
+export function getScene(){
+    return scene
+}
+
 export default async function createScene(_engine){
-    const scene = new Scene(_engine)
+    scene = new Scene(_engine)
     const cam = new ArcRotateCamera('cam', -Math.PI/2, 1, 10, Vector3.Zero(), scene)
-    // cam.attachControl()
-    scene.createDefaultEnvironment()
-    scene.createDefaultLight()
+    // cam.attachControl(document.querySelector('canvas'), true)
+    // scene.createDefaultEnvironment()
+    const light = new HemisphericLight('light', new Vector3(0,10,0), scene)
+
+    const box = MeshBuilder.CreateBox("toInstanceBox", { height: 2}, scene)
+    // Set the pivot matrix
+    
+    box.position = new Vector3(2,1,0)
+    box.setPivotPoint(new Vector3(0,-1,0));
+    log(box.getAbsolutePosition())
+    const ground = MeshBuilder.CreateGround("asd", {width:100, height:100}, scene)
+
+    const skybox = MeshBuilder.CreateBox("skyBox", {size: 500}, scene);
+    skybox.infiniteDistance = true;
+ 
+    // Create SkyMaterial and apply it to the skybox
+    const skyMaterial = new SkyMaterial("skyMaterial", scene);
+    skyMaterial.backFaceCulling = false;
+  
+    skyMaterial.inclination = 0.1; // Sun position (0 is sunrise, 0.5 is noon, 1 is sunset)
+    skyMaterial.turbidity = .5; // Lower turbidity for a clearer sky
+    skyMaterial.luminance = .9; // Higher luminance for a brighter sky
+    skyMaterial.rayleigh = 2; // Adjust the scattering of light
+
+    skybox.material = skyMaterial;
 
     AvatarRoot = await loadAvatarContainer(scene, "avatar.glb", SceneLoader)
 
@@ -36,15 +64,38 @@ export default async function createScene(_engine){
 
     setState("GAME")
     checkPlayers()
-    // createPlayer({x:2,y:0,z:0}, AvatarRoot, animationsGLB)
-    // createPlayer({x:1,y:0,z:0}, AvatarRoot, animationsGLB)
-    // createPlayer({x:0,y:0,z:-1}, AvatarRoot, animationsGLB)
-    log(scene.animationGroups)
+    scene.onPointerObservable.add((e) => {
+        if (e.type === PointerEventTypes.POINTERDOWN) {
+            const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), scene.activeCamera);
+            let pickInfo = scene.pickWithRay(ray);
+            const clickedMeshName = pickInfo.pickedMesh.name.toLowerCase()
+            const clickedPos = pickInfo.pickedMesh.getAbsolutePosition()
+            const myDetail = getMyDetail()
+            const myMesh = scene.getMeshByName(`player.${myDetail._id}`)
+            if(!myMesh) return log('cannot find my mesh')
+            const currentPos = myMesh.position
+            log('will move')
+            emitMove({
+                _id: myDetail._id, 
+                movementName: "clickedTarget",
+                loc: {x: currentPos.x, y: currentPos.y,z: currentPos.z}, 
+                direction: {x: clickedPos.x, y: currentPos.y, z: clickedPos.z} 
+              })
+        }
+    });
     scene.registerBeforeRender(() => {
         const deltaT = _engine.getDeltaTime()
-        
+        players.forEach(pl => {
+            if(pl._movingForward){
+                log("moving forward")
+                // pl.anims[1].play()
+                animationBlending(pl.anims[0], 1, pl.anims[1],1, false, .001)
+                // pl.mainBody.lookAt(new Vector3(pl.dir.x, pl.mainBody.position.y, pl.dir.z),0,0,0)
+            }
+                   
+       
+        })
     })
-
     return {scene}
 }
 
@@ -94,7 +145,6 @@ function* animationBlending(fromAnim, fromAnimSpeedRatio, toAnim, toAnimSpeedRat
     }
     currentAnimation = toAnim;
 }
-
 function blendAnim(toAnim, _anims, isLooping){
     let currentWeight = 1;
     let newWeight = 0;
@@ -129,20 +179,67 @@ function blendAnim(toAnim, _anims, isLooping){
         currentAnimation.setWeightForAllAnimatables(currentWeight);
     }, 25)
 }
-
+export function blendAnimv2(pl,toAnim, _anims, isLooping){
+    let currentWeight = 1
+    let newWeight = 0
+    let desiredAnimIsPlaying = false
+    pl.anims.forEach(anim => {
+        if(anim.isPlaying){
+            if(anim.name === toAnim.name) return desiredAnimIsPlaying = true
+        }
+    })
+    if(desiredAnimIsPlaying) return log("desired anim is still running")
+    let currentPlayingAnim = pl.anims.find(anim => anim.isPlaying)
+    if(!currentPlayingAnim) {
+        currentPlayingAnim = pl.anims[0]
+    }
+    currentPlayingAnim.setWeightForAllAnimatables(currentWeight)
+    toAnim.setWeightForAllAnimatables(newWeight)
+    
+    currentPlayingAnim.stop()
+    toAnim.play(isLooping)
+    clearInterval(pl.weightInterval)
+    pl.weightInterval = setInterval(() => {
+        currentWeight-=.1
+        newWeight+=.1
+        currentPlayingAnim.setWeightForAllAnimatables(currentWeight)
+        toAnim.setWeightForAllAnimatables(newWeight)
+        // log(newWeight)
+        if(newWeight >= 1) return clearInterval(pl.weightInterval)
+    }, 39)
+}
 export function rotateAnim(dirTarg, body, rotationAnimation, scene, spdRatio, cb){
     var diffX = dirTarg.x - body.position.x;
     var diffY = dirTarg.z - body.position.z;
     const angle = Math.atan2(diffX,diffY)
-  
+
+    // rotationAnimation.setKeys([
+    //     { frame: 0, value: body.rotation.y },
+    //     // { frame: 40, value:  angle/3},
+    //     { frame: 30, value: angle}
+    // ]);
+
+    let angleDifference = angle - body.rotation.y;
+
+    // Ensure the angle is within the range [-π, π]
+    if (angleDifference > Math.PI) {
+    angleDifference -= 2 * Math.PI;
+    } else if (angleDifference < -Math.PI) {
+    angleDifference += 2 * Math.PI;
+    }
+    const targetAngle = body.rotation.y + angleDifference
+    // if(body.rotation.y === targetAngle) return
+ 
+    // Set up the rotation animation with the normalized angle
     rotationAnimation.setKeys([
         { frame: 0, value: body.rotation.y },
-        { frame: 20, value:  angle/3},
-        { frame: 60, value: angle}
+        { frame: 30, value: targetAngle }
     ]);
+
     body.animations[0] = rotationAnimation
-    scene.beginAnimation(body, 0, 60, false,spdRatio ? spdRatio : 4, () => {
-        cb()
+    // scene.stopAnimation(body)
+    scene.beginAnimation(body, 0, 30, false,spdRatio ? spdRatio : 4, () => {
+        if(cb) cb()
     });
 }
 
@@ -155,11 +252,13 @@ export function checkPlayers(){
             const playerInScene = players.some(plscene => plscene._id === pl._id)
             if(playerInScene) return log('player is already in scene')
 
-            players.push(createPlayer(pl, AvatarRoot, animationsGLB))
+            players.push(createPlayer(pl, AvatarRoot, animationsGLB, scene))
         })
     }
 }
-
+export function getPlayersInScene(){
+    return players
+}
 export function playerDispose(playerDetail){
     log(playerDetail)
     const playerToDispose = players.find(pl => pl._id === playerDetail._id)
@@ -221,3 +320,38 @@ export function playerDispose(playerDetail){
     // })
     // const cyl = MeshBuilder.CreateCylinder('asd', { diameter: .5}, scene)
     // cyl.position = new Vector3(-3,0,0)
+
+    // function blendAnim(toAnim, _anims, isLooping){
+    //     let currentWeight = 1;
+    //     let newWeight = 0;
+    //     let fromAnimSpeedRatio = 1
+    //     let toAnimSpeedRatio = 1
+    
+    //     _anims.forEach(anim => {
+    //         anim.setWeightForAllAnimatables(0);
+    //     })
+    
+    //     currentAnimation.stop();
+    //     toAnim.play(isLooping);
+    
+    //     currentAnimation.speedRatio = 1;
+    //     toAnim.speedRatio = 1;
+    
+    //     toAnim.setWeightForAllAnimatables(0);
+    //     currentAnimation.setWeightForAllAnimatables(1);
+        
+    //     let prevInterval = interval;
+    
+    //     clearInterval(interval)
+    //     interval = setInterval(() => {
+    //         if(newWeight >= 1) {
+    //             currentAnimation = toAnim
+    //             return clearInterval(prevInterval)
+    //         }
+    //         log('transitioning')
+    //         currentWeight -= .05
+    //         newWeight += .05
+    //         toAnim.setWeightForAllAnimatables(newWeight);
+    //         currentAnimation.setWeightForAllAnimatables(currentWeight);
+    //     }, 25)
+    // }

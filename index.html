@@ -8,11 +8,16 @@
   <title>Vite App</title>
   <style>
     body{
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
       height: 80vh;
       width: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
+      position: relative;
+      z-index: -1;
     }
     .room-lists{
       display: flex;
@@ -20,6 +25,7 @@
       align-items: center;
       gap: 20px;
       flex-wrap: wrap;
+      /* pointer-events: none; */
     }
     canvas{
       position: fixed;
