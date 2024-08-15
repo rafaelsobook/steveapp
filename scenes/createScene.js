@@ -27,7 +27,7 @@ export function getScene(){
 export default async function createScene(_engine){
     scene = new Scene(_engine)
     const cam = new ArcRotateCamera('cam', -Math.PI/2, 1, 10, Vector3.Zero(), scene)
-    // cam.attachControl(document.querySelector('canvas'), true)
+    cam.attachControl(document.querySelector('canvas'), true)
     // scene.createDefaultEnvironment()
     const light = new HemisphericLight('light', new Vector3(0,10,0), scene)
 
@@ -57,9 +57,11 @@ export default async function createScene(_engine){
 
     await importAnimations("idle_anim.glb")
     await importAnimations("walk_anim.glb") //1
-    await importAnimations("jump_anim.glb")
+    // await importAnimations("jump_anim.glb")
+    await importAnimations("jump_new.glb")
     await importAnimations("walkback_anim.glb")
 
+    log(animationsGLB)
     await scene.whenReadyAsync()
 
     setState("GAME")
@@ -179,7 +181,7 @@ function blendAnim(toAnim, _anims, isLooping){
         currentAnimation.setWeightForAllAnimatables(currentWeight);
     }, 25)
 }
-export function blendAnimv2(pl,toAnim, _anims, isLooping){
+export function blendAnimv2(pl,toAnim, _anims, isLooping, afterEndDetail){
     let currentWeight = 1
     let newWeight = 0
     let desiredAnimIsPlaying = false
@@ -188,10 +190,13 @@ export function blendAnimv2(pl,toAnim, _anims, isLooping){
             if(anim.name === toAnim.name) return desiredAnimIsPlaying = true
         }
     })
-    if(desiredAnimIsPlaying) return log("desired anim is still running")
+    if(desiredAnimIsPlaying) return 
     let currentPlayingAnim = pl.anims.find(anim => anim.isPlaying)// idle anim
     if(!currentPlayingAnim) {
         currentPlayingAnim = pl.anims[0]
+        if(afterEndDetail){
+            currentPlayingAnim = afterEndDetail.lastAnimation
+        }
     }
     currentPlayingAnim.setWeightForAllAnimatables(currentWeight)
     toAnim.setWeightForAllAnimatables(newWeight)
@@ -206,7 +211,10 @@ export function blendAnimv2(pl,toAnim, _anims, isLooping){
         toAnim.setWeightForAllAnimatables(newWeight)
         // log(newWeight)
         if(newWeight >= 1) return clearInterval(pl.weightInterval)
-    }, 39)
+    }, 50)
+    toAnim.onAnimationEndObservable.addOnce(() => {
+        if(afterEndDetail) afterEndDetail.run()
+    })
 }
 export function rotateAnim(dirTarg, body, rotationAnimation, scene, spdRatio, cb){
     var diffX = dirTarg.x - body.position.x;

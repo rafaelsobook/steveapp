@@ -25,8 +25,8 @@ export function getSocket(){
 
 export function initializeSocket(){
   if (socket !== undefined) return
-  socket = io("https://steveapptcp.onrender.com/")
-  // socket = io("ws://localhost:3000")
+  // socket = io("https://steveapptcp.onrender.com/")
+  socket = io("ws://localhost:3000")
 
   socket.on('room-size', roomLength => {
     for(var i=0;i<roomLength;i++){
@@ -55,6 +55,7 @@ export function initializeSocket(){
 
   // movements
   socket.on("a-player-moved", playersInRoom => {
+    // log(playersInRoom)
     playersInRoom.forEach(data => {
       const playersInScene = getPlayersInScene()
       const playerThatMoved = playersInScene.find(pl => pl._id === data._id)
@@ -64,19 +65,57 @@ export function initializeSocket(){
           blendAnimv2(playerThatMoved, playerThatMoved.anims[1], playerThatMoved.anims, true)
 
           const plPos = playerThatMoved.mainBody.position
+
           if(playerThatMoved._movementName !==data._movementName && playerThatMoved.canRotate){
             playerThatMoved._movementName = data._movementName
             rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 4)
             // playerThatMoved.mainBody.lookAt(new Vector3(loc.x,0,loc.z),0,0,0)
           }
-          log("x:", loc.x, "z:", loc.z);
-          const magnitude = Math.sqrt(loc.x * loc.x + loc.z * loc.z);
-          const normX = loc.x/magnitude
-          const normZ = loc.z/magnitude
-          log("dirX:", normX, "dirZ:", normZ);
-
-          playerThatMoved.mainBody.lookAt(new Vector3(loc.x,0,loc.z),0,0,0);
           
+          // const magnitude = Math.sqrt((plPos.x - loc.x)**2 + loc.z - plPos);
+          // const normX = loc.x/magnitude
+          // const normZ = loc.z/magnitude
+
+          const diffX = loc.x - plPos.x
+          const diffZ = loc.z - plPos.z
+          const distance = Math.sqrt(diffX**2 + diffZ**2)
+          // log("distance ", distance)
+
+          // log(Date.now())
+          // log("x:", plPos.x, "z:", plPos.z);
+          // log("dirx:", dir.x, "dirz:", dir.z);
+          // log("diffX:", diffX, "diffZ:", diffZ);
+ 
+          const multX = diffX*10000
+          const multZ = diffZ*10000
+       
+          // log("multX:", multX, "multZ:", multZ);
+
+          const targX = plPos.x+multX
+          const targZ = plPos.z+multZ
+          // log(targX, targZ)
+
+
+          let map = new Map()
+          map.set("timestamp", Date.now())
+          map.set("x", plPos.x)
+          map.set("z", plPos.z)
+          map.set("diffX", diffX)
+          map.set("diffZ", diffZ)
+          map.set("multX", multX)
+          map.set("multZ",multZ)
+          map.set("targX", targX)
+          map.set("targZ", targZ)
+      
+          // log(JSON.stringify(Object.fromEntries(map)))
+          
+          playerThatMoved.mainBody.lookAt(new Vector3(dir.x,0,dir.z),0,0,0);
+
+          playerThatMoved.mainBody.position.x = loc.x
+          playerThatMoved.mainBody.position.z = loc.z        
+          
+          
+                    
           // if(data._movingForward && !playerThatMoved._movingForward){
           //   playerThatMoved._movingForward = true
           //   rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 4)
@@ -93,8 +132,6 @@ export function initializeSocket(){
           //   playerThatMoved._movingRight = true
           //   rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 4)
           // }
-          playerThatMoved.mainBody.position.x = loc.x
-          playerThatMoved.mainBody.position.z = loc.z         
         }
       }
     })
@@ -104,7 +141,12 @@ export function initializeSocket(){
       const plThatStopped = playersInScene.find(pl => pl._id === data._id)
       if(plThatStopped){
           if(data.movementName === "jump"){
-            return blendAnimv2(plThatStopped, plThatStopped.anims[2], plThatStopped.anims)
+            return blendAnimv2(plThatStopped, plThatStopped.anims[2], plThatStopped.anims, false, {
+              lastAnimation:  plThatStopped.anims[2],
+              run: () => {
+                blendAnimv2(plThatStopped, plThatStopped.anims[0], plThatStopped.anims, false)
+              }
+            })
           }
           blendAnimv2(plThatStopped, plThatStopped.anims[0], plThatStopped.anims, true)
           plThatStopped._movingForward = data._movingForward

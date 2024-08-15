@@ -18,8 +18,13 @@ export async function main(){
   window.addEventListener('resize', e => engine.resize())
   window.addEventListener("keydown", e => {
     const keypressed = e.key.toLowerCase()
+    let myDetail = getMyDetail()
+    let myCharacterInScene = getPlayersInScene().find(plScene => plScene._id === myDetail._id)
+    if(!myCharacterInScene) return log("my Character mesh not found")
     
+    let currentPos = myCharacterInScene.mainBody.getAbsolutePosition();
     let movementName
+    
     switch(keypressed){
       case "w":
         movementName = "forward"
@@ -39,11 +44,8 @@ export async function main(){
     }
     if(!movementName) return log("not pressing wasd")
 
-    let myDetail = getMyDetail()
-    let myCharacterInScene = getPlayersInScene().find(plScene => plScene._id === myDetail._id)
-    if(!myCharacterInScene) return log("my Character mesh not found")
-    let currentPos = myCharacterInScene.mainBody.getAbsolutePosition();
-    
+    // const rotY = myCharacterInScene.mainBody.getRotationQuaternion(Space.WORLD)
+
     emitMove({
       _id: myDetail._id, 
       movementName,
