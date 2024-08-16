@@ -27,8 +27,8 @@ export function getSocket(){
 
 export function initializeSocket(){
   if (socket !== undefined) return
-  // socket = io("https://steveapptcp.onrender.com/")
-  socket = io("ws://localhost:3000")
+  socket = io("https://steveapptcp.onrender.com/")
+  // socket = io("ws://localhost:3000")
 
   socket.on('room-size', roomLength => {
     for(var i=0;i<roomLength;i++){
