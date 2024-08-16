@@ -2,7 +2,7 @@ import { Vector3, Animation, MeshBuilder } from "@babylonjs/core";
 import { getMyDetail } from "./socket/socketLogic.js";
 const log = console.log
 export async function loadAvatarContainer(scene, glbName, SceneLoader){
-    return await SceneLoader.LoadAssetContainerAsync("./models/", `${glbName}`, scene);
+    return await SceneLoader.LoadAssetContainerAsync("https://models.readyplayer.me/66be713b3f3b5915e2df2b32.glb", null, scene);
 }
 export function createPlayer(detail, RootAvatar, animationsGLB, scene){
     const {loc, dir, _id, name, _movingForward, _movingBackward, _movingLeft, _movingRight } = detail
@@ -62,7 +62,8 @@ export function createPlayer(detail, RootAvatar, animationsGLB, scene){
         _movingRight,
         _movementName: undefined,
         canRotate: true,
-        weightInterval: undefined
+        weightInterval: undefined,
+        
     }
 }
 export async function createAvatar_Old(glbName, pos, direction, animationsGLB){

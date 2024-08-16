@@ -4,7 +4,7 @@ import createScene, { getPlayersInScene } from "./scenes/createScene.js";
 const log = console.log;
 
 let state = 'LOBBY' // LOADING, LOBBY, GAME
-
+let canPress = true
 initializeSocket()
 
 
@@ -43,9 +43,9 @@ export async function main(){
       break
     }
     if(!movementName) return log("not pressing wasd")
-
+    if(!canPress) return log("already using the same key")
     // const rotY = myCharacterInScene.mainBody.getRotationQuaternion(Space.WORLD)
-
+    if(movementName === myCharacterInScene._movementName) return log("already moving same direction")
     emitMove({
       _id: myDetail._id, 
       movementName,
@@ -82,6 +82,7 @@ export async function main(){
     let myDetail = getMyDetail()
     let myCharacterInScene = getPlayersInScene().find(plScene => plScene._id === myDetail._id)
     if(!myCharacterInScene) return log("my Character mesh not found")
+    canPress = true
     let currentPos = myCharacterInScene.mainBody.getAbsolutePosition();
     emitStop({
       _id: myDetail._id, 

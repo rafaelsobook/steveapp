@@ -53,7 +53,7 @@ export default async function createScene(_engine){
 
     skybox.material = skyMaterial;
 
-    AvatarRoot = await loadAvatarContainer(scene, "avatar.glb", SceneLoader)
+    AvatarRoot = await loadAvatarContainer(scene, "avatar2.glb", SceneLoader)
 
     await importAnimations("idle_anim.glb")
     await importAnimations("walk_anim.glb") //1

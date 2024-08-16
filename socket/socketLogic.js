@@ -10,6 +10,8 @@ let socket
 let myDetail //_id, name, socketId, loc, roomNum
 let playersInServer = []
 
+
+
 listElement.addEventListener("click", e => {
     const roomNumber = e.target.className.split(" ")[1]
     if(!roomNumber) return
@@ -60,17 +62,12 @@ export function initializeSocket(){
       const playersInScene = getPlayersInScene()
       const playerThatMoved = playersInScene.find(pl => pl._id === data._id)
       if(playerThatMoved){
+        
         if(data._movingForward || data._movingBackward || data._movingLeft || data._movingRight){
           const { loc, dir } = data    
           blendAnimv2(playerThatMoved, playerThatMoved.anims[1], playerThatMoved.anims, true)
 
           const plPos = playerThatMoved.mainBody.position
-
-          if(playerThatMoved._movementName !==data._movementName && playerThatMoved.canRotate){
-            playerThatMoved._movementName = data._movementName
-            rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 4)
-            // playerThatMoved.mainBody.lookAt(new Vector3(loc.x,0,loc.z),0,0,0)
-          }
           
           // const magnitude = Math.sqrt((plPos.x - loc.x)**2 + loc.z - plPos);
           // const normX = loc.x/magnitude
@@ -109,13 +106,34 @@ export function initializeSocket(){
       
           // log(JSON.stringify(Object.fromEntries(map)))
           
-          playerThatMoved.mainBody.lookAt(new Vector3(dir.x,0,dir.z),0,0,0);
+          log(playerThatMoved._movementName, data._movementName)
+          if(playerThatMoved._movementName !== data._movementName){
+            playerThatMoved._movementName = data._movementName
+            rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 2)
+            // playerThatMoved.mainBody.lookAt(new Vector3(loc.x,0,loc.z),0,0,0)
+          }
+          playerThatMoved.mainBody.lookAt(new Vector3(loc.x,0,loc.z),0,0,0);
+          if(data._movingForward && playerThatMoved.mainBody.position.z < loc.z){
+            // playerThatMoved.mainBody.lookAt(new Vector3(loc.x,0,loc.z),0,0,0);
+            // rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 4)
+            playerThatMoved.mainBody.position.z = loc.z   
+          }
+          if(data._movingBackward && playerThatMoved.mainBody.position.z > loc.z){
+            // playerThatMoved.mainBody.lookAt(new Vector3(loc.x,0,loc.z),0,0,0);
+            // rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 4)
+            playerThatMoved.mainBody.position.z = loc.z   
+          }
+          if(data._movingLeft && playerThatMoved.mainBody.position.x > loc.x){
+            // playerThatMoved.mainBody.lookAt(new Vector3(loc.x,0,loc.z),0,0,0);
+            // rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 4)
+            playerThatMoved.mainBody.position.x = loc.x
+          }    
+          if(data._movingRight && playerThatMoved.mainBody.position.x < loc.x){
+            // rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 4)
+            // playerThatMoved.mainBody.lookAt(new Vector3(loc.x,0,loc.z),0,0,0);
+            playerThatMoved.mainBody.position.x = loc.x
+          }  
 
-          playerThatMoved.mainBody.position.x = loc.x
-          playerThatMoved.mainBody.position.z = loc.z        
-          
-          
-                    
           // if(data._movingForward && !playerThatMoved._movingForward){
           //   playerThatMoved._movingForward = true
           //   rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 4)
@@ -169,6 +187,7 @@ export function emitMove(movementDetail){
   // log(movementDetail.loc)
   socket.emit('emit-move', movementDetail)
 }
+
 export function emitStop(movementDetail){
   if(!socket) return log('socket is not yet ready')
   // log(movementDetail.loc)
