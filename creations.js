@@ -61,6 +61,7 @@ export function createPlayer(detail, RootAvatar, animationsGLB, scene){
         _movingLeft,
         _movingRight,
         _movementName: undefined,
+        _actionName: undefined,
         canRotate: true,
         weightInterval: undefined,
         

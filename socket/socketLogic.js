@@ -10,8 +10,6 @@ let socket
 let myDetail //_id, name, socketId, loc, roomNum
 let playersInServer = []
 
-
-
 listElement.addEventListener("click", e => {
     const roomNumber = e.target.className.split(" ")[1]
     if(!roomNumber) return
@@ -65,8 +63,9 @@ export function initializeSocket(){
         
         if(data._movingForward || data._movingBackward || data._movingLeft || data._movingRight){
           const { loc, dir } = data    
-          blendAnimv2(playerThatMoved, playerThatMoved.anims[1], playerThatMoved.anims, true)
-
+          if(playerThatMoved._actionName === undefined){
+            blendAnimv2(playerThatMoved, playerThatMoved.anims[1], playerThatMoved.anims, true)
+          }
           const plPos = playerThatMoved.mainBody.position
           
           // const magnitude = Math.sqrt((plPos.x - loc.x)**2 + loc.z - plPos);
@@ -106,7 +105,6 @@ export function initializeSocket(){
       
           // log(JSON.stringify(Object.fromEntries(map)))
           
-          log(playerThatMoved._movementName, data._movementName)
           if(playerThatMoved._movementName !== data._movementName){
             playerThatMoved._movementName = data._movementName
             rotateAnim({x:loc.x, y:plPos.y, z: loc.z}, playerThatMoved.mainBody, playerThatMoved.rotationAnimation, getScene(), 2)
@@ -158,14 +156,7 @@ export function initializeSocket(){
       const playersInScene = getPlayersInScene()
       const plThatStopped = playersInScene.find(pl => pl._id === data._id)
       if(plThatStopped){
-          if(data.movementName === "jump"){
-            return blendAnimv2(plThatStopped, plThatStopped.anims[2], plThatStopped.anims, false, {
-              lastAnimation:  plThatStopped.anims[2],
-              run: () => {
-                blendAnimv2(plThatStopped, plThatStopped.anims[0], plThatStopped.anims, false)
-              }
-            })
-          }
+         
           blendAnimv2(plThatStopped, plThatStopped.anims[0], plThatStopped.anims, true)
           plThatStopped._movingForward = data._movingForward
           plThatStopped._movingBackward = data._movingBackward
@@ -174,6 +165,36 @@ export function initializeSocket(){
           plThatStopped._movementName = undefined
           plThatStopped.canRotate = true
       }
+  })
+  socket.on("player-emitted-action", data => {
+    const playersInScene = getPlayersInScene()
+    const player = playersInScene.find(pl => pl._id === data._id)
+    if(player){ 
+      if(player._actionName === data.actionName) return log("still doing the same action")
+      player._actionName = data.actionName  
+      switch(player._actionName){
+        case "jump":
+          log("someone jumped")
+          // blendAnimv2(player, player.anims[2], player.anims, false, {
+          //   lastAnimation:  player.anims[2],
+          //   run: () => {
+          //     blendAnimv2(player, player.anims[0], player.anims, false)
+          //   }
+          // })
+          blendAnimv2(player, player.anims[2], player.anims, false)
+      break;
+      }
+        
+    }
+  })
+  socket.on("remove-action", data => {
+    const playersInScene = getPlayersInScene()
+    const player = playersInScene.find(pl => pl._id === data._id)
+    if(player){ 
+      if(player._actionName === data.actionName) {
+        player._actionName = undefined
+      }        
+    }
   })
 
   socket.on('player-dispose', playerDetail => {
@@ -192,6 +213,11 @@ export function emitStop(movementDetail){
   if(!socket) return log('socket is not yet ready')
   // log(movementDetail.loc)
   socket.emit('emit-stopped', movementDetail)
+}
+export function emitAction(actionDetail){
+  log("emitting ", actionDetail.actionName)
+  if(!socket) return log("socket not ready")
+  socket.emit("emit-action", actionDetail)
 }
 // tools
 function updateAllPlayers(_newPlayers){

@@ -1,5 +1,5 @@
 import { Engine, MeshBuilder, Vector3, PointerEventTypes } from '@babylonjs/core'
-import { emitMove, emitStop, getMyDetail, initializeSocket } from './socket/socketLogic.js';
+import { emitAction, emitMove, emitStop, getMyDetail, initializeSocket } from './socket/socketLogic.js';
 import createScene, { getPlayersInScene } from "./scenes/createScene.js";
 const log = console.log;
 
@@ -46,6 +46,7 @@ export async function main(){
     if(!canPress) return log("already using the same key")
     // const rotY = myCharacterInScene.mainBody.getRotationQuaternion(Space.WORLD)
     if(movementName === myCharacterInScene._movementName) return log("already moving same direction")
+    if(myCharacterInScene._actionName !== undefined) return console.warn("has actions ")
     emitMove({
       _id: myDetail._id, 
       movementName,
@@ -70,16 +71,15 @@ export async function main(){
       case "s":
         movementName = "backward"
       break
-      case " ":
-        movementName = "jump"
-      break
       default:
         movementName = undefined
       break
     }
-    if(!movementName) return log("not pressing wasd")
-
     let myDetail = getMyDetail()
+    if(keypressed === " ") return emitAction({_id: myDetail._id, actionName: "jump"})
+    if(!movementName) return 
+
+    
     let myCharacterInScene = getPlayersInScene().find(plScene => plScene._id === myDetail._id)
     if(!myCharacterInScene) return log("my Character mesh not found")
     canPress = true
